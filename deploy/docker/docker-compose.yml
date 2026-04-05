@@ -40,6 +40,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mcp-test-server:
+        condition: service_healthy
+      mock-llm:
+        condition: service_healthy
 
   coderunner:
     build:
@@ -81,6 +85,26 @@ services:
       server:
         condition: service_started
     restart: "no"
+
+  mcp-test-server:
+    build:
+      context: ../../tests/e2e/mcp-server
+      dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mock-llm:
+    build:
+      context: ../../tests/e2e/mock-llm
+      dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9091/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgresql:
     image: postgres:16-alpine

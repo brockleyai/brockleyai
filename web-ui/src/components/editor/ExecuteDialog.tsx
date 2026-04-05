@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import type { GraphNode, Execution } from "../../store";
+import type { GraphNode, Execution, ExecutionStep } from "../../store";
+import { getExecutionSteps } from "../../api";
 
 interface ExecuteDialogProps {
   graphId: string;
   nodes: GraphNode[];
+  serverUrl: string;
+  apiKey: string;
   onClose: () => void;
   onExecute: (input: Record<string, unknown>, mode: string) => Promise<Execution | null>;
 }
@@ -49,21 +52,31 @@ function buildDefaultFromSchema(schema: Record<string, unknown>): unknown {
   }
 }
 
-export default function ExecuteDialog({ graphId, nodes, onClose, onExecute }: ExecuteDialogProps) {
+export default function ExecuteDialog({ graphId, nodes, serverUrl, apiKey, onClose, onExecute }: ExecuteDialogProps) {
   const defaultInput = buildDefaultInput(nodes);
   const [jsonInput, setJsonInput] = useState(JSON.stringify(defaultInput, null, 2));
   const [mode, setMode] = useState<"sync" | "async">("sync");
   const [parseError, setParseError] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
   const [result, setResult] = useState<Execution | null>(null);
+  const [steps, setSteps] = useState<ExecutionStep[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Reset when opened
   useEffect(() => {
     setResult(null);
+    setSteps([]);
     setError(null);
     setExecuting(false);
   }, [graphId]);
+
+  // Fetch steps when execution completes
+  useEffect(() => {
+    if (!result || (result.status !== "completed" && result.status !== "failed")) return;
+    getExecutionSteps(serverUrl, apiKey, result.id)
+      .then(setSteps)
+      .catch(() => {});
+  }, [result, serverUrl, apiKey]);
 
   async function handleExecute() {
     let parsed: Record<string, unknown>;
@@ -209,6 +222,53 @@ export default function ExecuteDialog({ graphId, nodes, onClose, onExecute }: Ex
                   <pre className="rounded-lg border border-red-400/20 bg-red-400/5 p-3 font-mono text-xs text-red-300">
                     {typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : String(result.error)}
                   </pre>
+                </div>
+              )}
+
+              {/* Step outputs */}
+              {steps.length > 0 && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-gray-400">
+                    Node Results
+                  </label>
+                  {steps
+                    .filter((s) => s.status === "completed" || s.status === "failed")
+                    .map((step) => {
+                    const nodeName = nodes.find((n) => n.id === step.node_id)?.name || step.node_id;
+                    return (
+                    <div
+                      key={step.id}
+                      className="rounded-lg border border-[rgba(255,255,255,0.06)] bg-[#0d0f14] p-3"
+                    >
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-300">
+                          {nodeName}
+                        </span>
+                        <span className="text-[10px] text-gray-600">{step.node_type}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                          step.status === "completed" ? "bg-emerald-400/10 text-emerald-400" :
+                          step.status === "failed" ? "bg-red-400/10 text-red-400" :
+                          "bg-gray-400/10 text-gray-400"
+                        }`}>
+                          {step.status}
+                        </span>
+                        {step.duration_ms != null && (
+                          <span className="text-[10px] text-gray-600">{step.duration_ms}ms</span>
+                        )}
+                      </div>
+                      {step.output && Object.keys(step.output).length > 0 && (
+                        <pre className="max-h-[200px] overflow-auto rounded border border-[rgba(255,255,255,0.04)] bg-[#080a0e] p-2 font-mono text-[11px] text-gray-300">
+                          {JSON.stringify(step.output, null, 2)}
+                        </pre>
+                      )}
+                      {step.error && (
+                        <pre className="mt-1 rounded border border-red-400/10 bg-red-400/5 p-2 font-mono text-[11px] text-red-300">
+                          {typeof step.error === "object" ? JSON.stringify(step.error, null, 2) : String(step.error)}
+                        </pre>
+                      )}
+                    </div>
+                  );
+                  })}
                 </div>
               )}
 

@@ -877,6 +877,8 @@ function GraphEditorInner() {
         <ExecuteDialog
           graphId={currentGraphId || ""}
           nodes={graph.nodes || []}
+          serverUrl={serverUrl}
+          apiKey={apiKey}
           onClose={() => setShowExecuteDialog(false)}
           onExecute={handleExecuteWithResult}
         />
