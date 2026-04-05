@@ -1,0 +1,129 @@
+# E2E Superagent Code Execution (Real LLM)
+#
+# Terraform representation of the E2E Superagent Code Execution (Real LLM) test graph.
+# See graph.json for the equivalent JSON representation.
+
+variable "name" {
+  type    = string
+  default = "E2E Superagent Code Execution (Real LLM)"
+}
+
+variable "openrouter_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+resource "brockley_graph" "test" {
+  name        = var.name
+  namespace   = "e2e-tests"
+
+  nodes = <<-JSON
+  [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {
+          "name": "numbers",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {}
+    },
+    {
+      "id": "agent-1",
+      "name": "Code Agent",
+      "type": "superagent",
+      "input_ports": [
+        {
+          "name": "numbers",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "prompt": "You have code execution enabled. Use _code_execute to compute the sum of the following comma-separated numbers and return the numeric result: {{input.numbers}}. Your final answer must contain ONLY the numeric sum, nothing else.",
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-20b",
+        "api_key": "${var.openrouter_api_key}",
+        "max_iterations": 5,
+        "max_total_tool_calls": 10,
+        "temperature": 0,
+        "timeout_seconds": 90,
+        "skills": [
+          {
+            "name": "tools",
+            "description": "General tools",
+            "mcp_url": "http://mcp-test-server:9090"
+          }
+        ],
+        "code_execution": {
+          "enabled": true,
+          "max_execution_time_sec": 10,
+          "max_executions_per_run": 5
+        },
+        "overrides": {
+          "evaluator": {
+            "disabled": true
+          }
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {}
+    }
+  ]
+  JSON
+
+  edges = <<-JSON
+  [
+    {
+      "id": "e1",
+      "source_node_id": "input-1",
+      "source_port": "numbers",
+      "target_node_id": "agent-1",
+      "target_port": "numbers"
+    },
+    {
+      "id": "e2",
+      "source_node_id": "agent-1",
+      "source_port": "result",
+      "target_node_id": "output-1",
+      "target_port": "result"
+    }
+  ]
+  JSON
+}

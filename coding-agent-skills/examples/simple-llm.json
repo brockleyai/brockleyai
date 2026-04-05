@@ -1,0 +1,59 @@
+{
+  "name": "simple-llm",
+  "description": "Minimal graph: send a question to an LLM and return the text response.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "question", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "llm-1",
+      "name": "Answer",
+      "type": "llm",
+      "input_ports": [
+        {"name": "question", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "response_text", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "api_key": "${OPENAI_API_KEY}",
+        "system_prompt": "You are a helpful assistant. Answer concisely.",
+        "user_prompt": "{{input.question}}",
+        "variables": [
+          {"name": "question", "schema": {"type": "string"}}
+        ],
+        "response_format": "text",
+        "temperature": 0.7,
+        "max_tokens": 512
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "answer", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "answer", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "question", "target_node_id": "llm-1", "target_port": "question"},
+    {"id": "e2", "source_node_id": "llm-1", "source_port": "response_text", "target_node_id": "output-1", "target_port": "answer"}
+  ]
+}

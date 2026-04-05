@@ -1,0 +1,104 @@
+{
+  "name": "stateful-loop",
+  "description": "Demonstrates back-edge loops with graph state. A worker node iterates, incrementing a counter and appending to a log, until the count reaches 3.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "state": {
+    "fields": [
+      {
+        "name": "count",
+        "schema": {"type": "number"},
+        "reducer": "replace",
+        "initial": 0
+      },
+      {
+        "name": "log",
+        "schema": {"type": "array", "items": {"type": "string"}},
+        "reducer": "append",
+        "initial": []
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "seed", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "worker",
+      "name": "Worker",
+      "type": "transform",
+      "input_ports": [
+        {"name": "data", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "data", "schema": {"type": "string"}},
+        {"name": "new_count", "schema": {"type": "number"}},
+        {"name": "log_entry", "schema": {"type": "string"}}
+      ],
+      "state_writes": [
+        {"state_field": "count", "port": "new_count"},
+        {"state_field": "log", "port": "log_entry"}
+      ],
+      "config": {
+        "expressions": {
+          "data": "input.data",
+          "new_count": "state.count + 1",
+          "log_entry": "\"iteration-\" + (state.count + 1 | toString)"
+        }
+      }
+    },
+    {
+      "id": "check",
+      "name": "Check Done",
+      "type": "conditional",
+      "input_ports": [
+        {"name": "value", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "continue", "schema": {"type": "string"}},
+        {"name": "done", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "branches": [
+          {"label": "continue", "condition": "state.count < 3"}
+        ],
+        "default_label": "done"
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "seed", "target_node_id": "worker", "target_port": "data"},
+    {"id": "e2", "source_node_id": "worker", "source_port": "data", "target_node_id": "check", "target_port": "value"},
+    {
+      "id": "e3",
+      "source_node_id": "check",
+      "source_port": "continue",
+      "target_node_id": "worker",
+      "target_port": "data",
+      "back_edge": true,
+      "condition": "input.continue != null",
+      "max_iterations": 10
+    },
+    {"id": "e4", "source_node_id": "check", "source_port": "done", "target_node_id": "output-1", "target_port": "result"}
+  ]
+}

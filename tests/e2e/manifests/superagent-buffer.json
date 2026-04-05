@@ -1,0 +1,12 @@
+{
+  "name": "superagent-buffer",
+  "graph": "superagent-buffer",
+  "requires_llm": true,
+  "requires_mcp": true,
+  "input": {"topic": "buffer test"},
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_contains", "field": "result", "substring": "Report: test output"}
+  ],
+  "timeout_seconds": 90
+}

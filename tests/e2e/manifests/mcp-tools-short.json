@@ -1,0 +1,16 @@
+{
+  "name": "mcp-tools-short",
+  "graph": "mcp-tools",
+  "requires_llm": false,
+  "requires_mcp": true,
+  "input": {
+    "text": "hi there",
+    "items": ["alpha", "beta"]
+  },
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_equals", "field": "classification", "value": "SHORT: 3 words"},
+    {"type": "output_equals", "field": "lookups", "value": ["alpha=first", "beta=second"]}
+  ],
+  "timeout_seconds": 60
+}

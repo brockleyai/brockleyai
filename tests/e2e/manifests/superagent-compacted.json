@@ -1,0 +1,12 @@
+{
+  "name": "superagent-compacted",
+  "graph": "superagent-compacted",
+  "requires_llm": true,
+  "requires_mcp": true,
+  "input": {"message": "hello from compacted"},
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_contains", "field": "result", "substring": "hello from compacted"}
+  ],
+  "timeout_seconds": 60
+}

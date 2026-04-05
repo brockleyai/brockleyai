@@ -1,0 +1,16 @@
+{
+  "name": "mcp-tools-long",
+  "graph": "mcp-tools",
+  "requires_llm": false,
+  "requires_mcp": true,
+  "input": {
+    "text": "this is a longer sentence",
+    "items": ["alpha"]
+  },
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_equals", "field": "classification", "value": "LONG: 6 words"},
+    {"type": "output_equals", "field": "lookups", "value": ["alpha=first"]}
+  ],
+  "timeout_seconds": 60
+}

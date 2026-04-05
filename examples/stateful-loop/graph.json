@@ -1,0 +1,247 @@
+{
+  "name": "E2E Stateful Loop",
+  "description": "E2E test: foreach, back-edge loops, state reducers (replace, append), post-loop processing.",
+  "namespace": "e2e-tests",
+  "version": 1,
+  "status": "active",
+  "state": {
+    "fields": [
+      {
+        "name": "count",
+        "schema": {"type": "number"},
+        "reducer": "replace",
+        "initial": 0
+      },
+      {
+        "name": "log",
+        "schema": {"type": "array", "items": {"type": "string"}},
+        "reducer": "append",
+        "initial": []
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [
+        {
+          "name": "items",
+          "schema": {"type": "array", "items": {"type": "string"}}
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "items",
+          "schema": {"type": "array", "items": {"type": "string"}}
+        }
+      ],
+      "config": {},
+      "position": {"x": 0, "y": 150}
+    },
+    {
+      "id": "foreach-1",
+      "name": "ForEach Process",
+      "type": "foreach",
+      "input_ports": [
+        {
+          "name": "items",
+          "schema": {"type": "array", "items": {"type": "string"}}
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "results",
+          "schema": {"type": "array", "items": {"type": "string"}}
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {"type": "number"},
+                "error": {"type": "string"}
+              }
+            }
+          }
+        }
+      ],
+      "config": {
+        "graph": {
+          "name": "ForEach Inner",
+          "namespace": "e2e-tests",
+          "version": 1,
+          "status": "active",
+          "nodes": [
+            {
+              "id": "inner-input",
+              "name": "Input",
+              "type": "input",
+              "input_ports": [],
+              "output_ports": [
+                {"name": "item", "schema": {"type": "string"}},
+                {"name": "index", "schema": {"type": "number"}}
+              ],
+              "config": {},
+              "position": {"x": 0, "y": 0}
+            },
+            {
+              "id": "inner-transform",
+              "name": "Upper",
+              "type": "transform",
+              "input_ports": [
+                {"name": "item", "schema": {"type": "string"}}
+              ],
+              "output_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "config": {
+                "expressions": {
+                  "result": "input.item | upper"
+                }
+              },
+              "position": {"x": 300, "y": 0}
+            },
+            {
+              "id": "inner-output",
+              "name": "Output",
+              "type": "output",
+              "input_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "output_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "config": {},
+              "position": {"x": 600, "y": 0}
+            }
+          ],
+          "edges": [
+            {"id": "ie1", "source_node_id": "inner-input", "source_port": "item", "target_node_id": "inner-transform", "target_port": "item"},
+            {"id": "ie2", "source_node_id": "inner-transform", "source_port": "result", "target_node_id": "inner-output", "target_port": "result"}
+          ]
+        },
+        "concurrency": 2,
+        "on_item_error": "continue"
+      },
+      "position": {"x": 200, "y": 150}
+    },
+    {
+      "id": "prepare",
+      "name": "Prepare",
+      "type": "transform",
+      "input_ports": [
+        {
+          "name": "results",
+          "schema": {"type": "array", "items": {"type": "string"}}
+        }
+      ],
+      "output_ports": [
+        {"name": "value", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "expressions": {
+          "value": "input.results | map(r => r.result) | join(\",\")"
+        }
+      },
+      "position": {"x": 450, "y": 150}
+    },
+    {
+      "id": "loop-body",
+      "name": "Loop Body",
+      "type": "transform",
+      "input_ports": [
+        {"name": "value", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "value", "schema": {"type": "string"}},
+        {"name": "count", "schema": {"type": "number"}},
+        {"name": "log_entry", "schema": {"type": "string"}}
+      ],
+      "state_writes": [
+        {"state_field": "count", "port": "count"},
+        {"state_field": "log", "port": "log_entry"}
+      ],
+      "config": {
+        "expressions": {
+          "value": "input.value",
+          "count": "state.count + 1",
+          "log_entry": "\"iter-\" + (state.count + 1 | toString)"
+        }
+      },
+      "position": {"x": 650, "y": 150}
+    },
+    {
+      "id": "evaluator",
+      "name": "Evaluator",
+      "type": "conditional",
+      "input_ports": [
+        {
+          "name": "value",
+          "schema": {"type": "string"}
+        }
+      ],
+      "output_ports": [
+        {"name": "loop", "schema": {"type": "string"}},
+        {"name": "done", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "branches": [
+          {
+            "label": "loop",
+            "condition": "state.count < 3"
+          }
+        ],
+        "default_label": "done"
+      },
+      "position": {"x": 850, "y": 150}
+    },
+    {
+      "id": "post-process",
+      "name": "Post Process",
+      "type": "transform",
+      "input_ports": [
+        {"name": "value", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "final_value", "schema": {"type": "string"}},
+        {"name": "char_count", "schema": {"type": "number"}}
+      ],
+      "config": {
+        "expressions": {
+          "final_value": "input.value",
+          "char_count": "input.value | length"
+        }
+      },
+      "position": {"x": 1050, "y": 150}
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "final_value", "schema": {"type": "string"}},
+        {"name": "char_count", "schema": {"type": "number"}}
+      ],
+      "output_ports": [
+        {"name": "final_value", "schema": {"type": "string"}},
+        {"name": "char_count", "schema": {"type": "number"}}
+      ],
+      "config": {},
+      "position": {"x": 1250, "y": 150}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "items", "target_node_id": "foreach-1", "target_port": "items"},
+    {"id": "e2", "source_node_id": "foreach-1", "source_port": "results", "target_node_id": "prepare", "target_port": "results"},
+    {"id": "e4", "source_node_id": "prepare", "source_port": "value", "target_node_id": "loop-body", "target_port": "value"},
+    {"id": "e5", "source_node_id": "loop-body", "source_port": "value", "target_node_id": "evaluator", "target_port": "value"},
+    {"id": "e6", "source_node_id": "evaluator", "source_port": "loop", "target_node_id": "loop-body", "target_port": "value", "back_edge": true, "condition": "input.loop != null", "max_iterations": 10},
+    {"id": "e7", "source_node_id": "evaluator", "source_port": "done", "target_node_id": "post-process", "target_port": "value"},
+    {"id": "e8", "source_node_id": "post-process", "source_port": "final_value", "target_node_id": "output-1", "target_port": "final_value"},
+    {"id": "e9", "source_node_id": "post-process", "source_port": "char_count", "target_node_id": "output-1", "target_port": "char_count"}
+  ]
+}

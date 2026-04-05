@@ -1,0 +1,50 @@
+{
+  "id": "test-api",
+  "name": "test-api",
+  "namespace": "default",
+  "description": "Test API for E2E testing",
+  "base_url": "http://api-test-server:9092",
+  "endpoints": [
+    {
+      "name": "get_customer",
+      "description": "Get a customer by their ID. Returns customer details including email and name.",
+      "method": "GET",
+      "path": "/customers/{{input.customer_id}}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "customer_id": { "type": "string", "description": "The customer ID to look up" }
+        },
+        "required": ["customer_id"]
+      }
+    },
+    {
+      "name": "create_charge",
+      "description": "Create a payment charge. Returns charge details with status.",
+      "method": "POST",
+      "path": "/charges",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "integer", "description": "Amount in cents" },
+          "currency": { "type": "string", "description": "Three-letter currency code" }
+        },
+        "required": ["amount", "currency"]
+      }
+    },
+    {
+      "name": "search",
+      "description": "Search for items by query string.",
+      "method": "GET",
+      "path": "/search",
+      "request_mapping": { "mode": "query_params" },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "q": { "type": "string", "description": "Search query" }
+        },
+        "required": ["q"]
+      }
+    }
+  ]
+}

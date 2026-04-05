@@ -1,0 +1,13 @@
+{
+  "name": "api-tool-standalone",
+  "graph": "api-tool-standalone",
+  "requires_llm": false,
+  "requires_mcp": false,
+  "requires_api_server": true,
+  "input": { "customer_id": "cus_123" },
+  "expected_status": "completed",
+  "assertions": [
+    { "type": "output_exists", "field": "result" }
+  ],
+  "timeout_seconds": 30
+}

@@ -1,0 +1,171 @@
+{
+  "name": "foreach-parallel",
+  "description": "Fan-out: process an array of URLs in parallel using a foreach node with an inner graph that fetches and summarizes each URL.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "urls", "schema": {"type": "array", "items": {"type": "string"}}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "foreach-1",
+      "name": "Process URLs",
+      "type": "foreach",
+      "input_ports": [
+        {"name": "items", "schema": {"type": "array", "items": {"type": "string"}}}
+      ],
+      "output_ports": [
+        {
+          "name": "results",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "result": {"type": "string"}
+              }
+            }
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {"type": "number"},
+                "error": {"type": "string"}
+              }
+            }
+          }
+        }
+      ],
+      "config": {
+        "graph": {
+          "name": "URL Processor Inner",
+          "namespace": "default",
+          "version": 1,
+          "status": "active",
+          "nodes": [
+            {
+              "id": "inner-input",
+              "name": "Input",
+              "type": "input",
+              "input_ports": [],
+              "output_ports": [
+                {"name": "item", "schema": {"type": "string"}},
+                {"name": "index", "schema": {"type": "number"}}
+              ],
+              "config": {}
+            },
+            {
+              "id": "fetch",
+              "name": "Fetch URL",
+              "type": "tool",
+              "input_ports": [
+                {"name": "url", "schema": {"type": "string"}}
+              ],
+              "output_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "config": {
+                "tool_name": "fetch_url",
+                "mcp_url": "http://fetch-server:9090"
+              }
+            },
+            {
+              "id": "summarize",
+              "name": "Summarize",
+              "type": "transform",
+              "input_ports": [
+                {"name": "url", "schema": {"type": "string"}},
+                {"name": "content", "schema": {"type": "string"}}
+              ],
+              "output_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "config": {
+                "expressions": {
+                  "result": "input.url + \": \" + (input.content | truncate(200))"
+                }
+              }
+            },
+            {
+              "id": "inner-output",
+              "name": "Output",
+              "type": "output",
+              "input_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "output_ports": [
+                {"name": "result", "schema": {"type": "string"}}
+              ],
+              "config": {}
+            }
+          ],
+          "edges": [
+            {"id": "ie1", "source_node_id": "inner-input", "source_port": "item", "target_node_id": "fetch", "target_port": "url"},
+            {"id": "ie2", "source_node_id": "inner-input", "source_port": "item", "target_node_id": "summarize", "target_port": "url"},
+            {"id": "ie3", "source_node_id": "fetch", "source_port": "result", "target_node_id": "summarize", "target_port": "content"},
+            {"id": "ie4", "source_node_id": "summarize", "source_port": "result", "target_node_id": "inner-output", "target_port": "result"}
+          ]
+        },
+        "concurrency": 3,
+        "on_item_error": "continue"
+      }
+    },
+    {
+      "id": "format",
+      "name": "Format Results",
+      "type": "transform",
+      "input_ports": [
+        {
+          "name": "results",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "result": {"type": "string"}
+              }
+            }
+          }
+        }
+      ],
+      "output_ports": [
+        {"name": "summary", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "expressions": {
+          "summary": "input.results | filter(x => x != null) | map(\"result\") | join(\"\\n\\n\")"
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "summary", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "summary", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "urls", "target_node_id": "foreach-1", "target_port": "items"},
+    {"id": "e2", "source_node_id": "foreach-1", "source_port": "results", "target_node_id": "format", "target_port": "results"},
+    {"id": "e3", "source_node_id": "format", "source_port": "summary", "target_node_id": "output-1", "target_port": "summary"}
+  ]
+}

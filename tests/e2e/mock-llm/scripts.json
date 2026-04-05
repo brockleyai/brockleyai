@@ -1,0 +1,301 @@
+{
+  "tool-loop-basic": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"hello world\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_2", "type": "function", "function": {"name": "word_count", "arguments": "{\"text\": \"hello world\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "The echo returned 'hello world' which has 2 words.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "tool-loop-chain": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "store_value", "arguments": "{\"key\": \"result\", \"value\": \"alpha beta gamma\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_2", "type": "function", "function": {"name": "transform_text", "arguments": "{\"operation\": \"uppercase\", \"text\": \"alpha beta gamma\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_3", "type": "function", "function": {"name": "store_value", "arguments": "{\"key\": \"transformed\", \"value\": \"ALPHA BETA GAMMA\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_4", "type": "function", "function": {"name": "retrieve_value", "arguments": "{\"key\": \"transformed\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "The transformed text is: ALPHA BETA GAMMA",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "tool-loop-limits": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"1\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_2", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"2\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_3", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"3\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_4", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"4\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_5", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"5\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      }
+    ]
+  },
+  "tool-loop-error-recovery": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "lookup", "arguments": "{\"key\": \"unknown_key\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_2", "type": "function", "function": {"name": "lookup", "arguments": "{\"key\": \"alpha\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "After recovering from the error, I found the value: first",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "tool-loop-auto-discover": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"discovered\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Auto-discovered tool returned: discovered",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "tool-loop-two-nodes-1": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"hello\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_2", "type": "function", "function": {"name": "word_count", "arguments": "{\"text\": \"hello\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Echo returned hello, word count is 1.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "tool-loop-two-nodes-2": {
+    "responses": [
+      {
+        "tool_calls": [
+          {"id": "call_1", "type": "function", "function": {"name": "transform_text", "arguments": "{\"operation\": \"uppercase\", \"text\": \"hello\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [
+          {"id": "call_2", "type": "function", "function": {"name": "store_value", "arguments": "{\"key\": \"result\", \"value\": \"HELLO\"}"}}
+        ],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Transformed to HELLO and stored.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "superagent-simple": {
+    "responses": [
+      {
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"researching\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c2", "type": "function", "function": {"name": "word_count", "arguments": "{\"text\": \"hello world test\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Research complete. Found 3 words.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "superagent-simple-eval": {
+    "responses": [
+      {"content": "{\"needs_more_work\": false, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Task complete\"}", "finish_reason": "stop"}
+    ]
+  },
+  "superagent-oneshot": {
+    "responses": [
+      {
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"one shot\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "One shot complete.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "superagent-buffer": {
+    "responses": [
+      {
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "_buffer_create", "arguments": "{\"name\": \"report\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c2", "type": "function", "function": {"name": "_buffer_append", "arguments": "{\"name\": \"report\", \"content\": \"# Report\\n\\nThis is the research report.\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c3", "type": "function", "function": {"name": "_buffer_append", "arguments": "{\"name\": \"report\", \"content\": \"\\n\\n## Findings\\n\\nKey finding: buffers work.\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c4", "type": "function", "function": {"name": "_buffer_finalize", "arguments": "{\"name\": \"report\", \"output_port\": \"result\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Report assembled via buffer.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "superagent-buffer-eval": {
+    "responses": [
+      {"content": "{\"needs_more_work\": false, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Buffer finalized\"}", "finish_reason": "stop"}
+    ]
+  },
+  "superagent-tasks": {
+    "responses": [
+      {
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "_task_create", "arguments": "{\"description\": \"Research topic\", \"priority\": \"high\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c2", "type": "function", "function": {"name": "_task_create", "arguments": "{\"description\": \"Write summary\", \"priority\": \"medium\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c3", "type": "function", "function": {"name": "_task_update", "arguments": "{\"id\": \"1\", \"status\": \"completed\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "tool_calls": [{"id": "c4", "type": "function", "function": {"name": "_task_update", "arguments": "{\"id\": \"2\", \"status\": \"completed\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "All tasks completed.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "superagent-tasks-eval": {
+    "responses": [
+      {"content": "{\"needs_more_work\": false, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"All tasks done\"}", "finish_reason": "stop"}
+    ]
+  },
+  "superagent-denied": {
+    "responses": [
+      {
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"working with allowed tools\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Completed using allowed tools only.",
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "superagent-denied-eval": {
+    "responses": [
+      {"content": "{\"needs_more_work\": false, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Done\"}", "finish_reason": "stop"}
+    ]
+  },
+  "superagent-timeout": {
+    "responses": [
+      {"tool_calls": [{"id": "c1", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"1\"}"}}], "finish_reason": "tool_calls"},
+      {"tool_calls": [{"id": "c2", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"2\"}"}}], "finish_reason": "tool_calls"},
+      {"tool_calls": [{"id": "c3", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"3\"}"}}], "finish_reason": "tool_calls"},
+      {"tool_calls": [{"id": "c4", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"4\"}"}}], "finish_reason": "tool_calls"},
+      {"tool_calls": [{"id": "c5", "type": "function", "function": {"name": "echo", "arguments": "{\"message\": \"5\"}"}}], "finish_reason": "tool_calls"},
+      {"content": "Still going...", "finish_reason": "stop"}
+    ]
+  },
+  "superagent-timeout-eval": {
+    "responses": [
+      {"content": "{\"needs_more_work\": true, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Keep going\"}", "finish_reason": "stop"},
+      {"content": "{\"needs_more_work\": true, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Keep going\"}", "finish_reason": "stop"},
+      {"content": "{\"needs_more_work\": true, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Keep going\"}", "finish_reason": "stop"},
+      {"content": "{\"needs_more_work\": true, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Keep going\"}", "finish_reason": "stop"},
+      {"content": "{\"needs_more_work\": true, \"stuck_detected\": false, \"should_compact\": false, \"reasoning\": \"Keep going\"}", "finish_reason": "stop"}
+    ]
+  },
+  "superagent-code-exec": {
+    "responses": [
+      {
+        "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "_code_execute", "arguments": "{\"code\": \"import json\\ndata = [1, 2, 3, 4, 5]\\nresult = sum(data)\\nbrockley.output({\\\"sum\\\": result, \\\"count\\\": len(data)})\"}"}}],
+        "finish_reason": "tool_calls"
+      },
+      {
+        "content": "Code execution computed: sum=15, count=5",
+        "finish_reason": "stop"
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "stateful-loop",
+  "graph": "stateful-loop",
+  "requires_llm": false,
+  "input": {
+    "items": ["alpha", "beta", "gamma"]
+  },
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_exists", "field": "final_value"},
+    {"type": "output_type", "field": "final_value", "json_type": "string"},
+    {"type": "output_exists", "field": "char_count"},
+    {"type": "output_type", "field": "char_count", "json_type": "number"},
+    {"type": "state_equals", "field": "count", "value": 3},
+    {"type": "state_exists", "field": "log"}
+  ],
+  "timeout_seconds": 60
+}

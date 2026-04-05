@@ -1,0 +1,154 @@
+{
+  "name": "conditional-routing",
+  "description": "Classify a message with an LLM, then route to different handlers based on the classification.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "message", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "classify",
+      "name": "Classify Message",
+      "type": "llm",
+      "input_ports": [
+        {"name": "message", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "category": {"type": "string"}
+            },
+            "required": ["category"]
+          }
+        }
+      ],
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "api_key": "${OPENAI_API_KEY}",
+        "user_prompt": "Classify this message into one of: question, complaint, praise.\nMessage: {{input.message}}\nRespond as JSON: {\"category\": \"...\"}",
+        "variables": [
+          {"name": "message", "schema": {"type": "string"}}
+        ],
+        "response_format": "json",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "category": {"type": "string", "enum": ["question", "complaint", "praise"]}
+          },
+          "required": ["category"]
+        },
+        "temperature": 0.0
+      }
+    },
+    {
+      "id": "router",
+      "name": "Route by Category",
+      "type": "conditional",
+      "input_ports": [
+        {
+          "name": "value",
+          "schema": {
+            "type": "object",
+            "properties": {"category": {"type": "string"}},
+            "required": ["category"]
+          }
+        }
+      ],
+      "output_ports": [
+        {"name": "question", "schema": {"type": "object", "properties": {"category": {"type": "string"}}, "required": ["category"]}},
+        {"name": "complaint", "schema": {"type": "object", "properties": {"category": {"type": "string"}}, "required": ["category"]}},
+        {"name": "praise", "schema": {"type": "object", "properties": {"category": {"type": "string"}}, "required": ["category"]}}
+      ],
+      "config": {
+        "branches": [
+          {"label": "question", "condition": "input.value.category == \"question\""},
+          {"label": "complaint", "condition": "input.value.category == \"complaint\""}
+        ],
+        "default_label": "praise"
+      }
+    },
+    {
+      "id": "handle-question",
+      "name": "Handle Question",
+      "type": "transform",
+      "input_ports": [
+        {"name": "value", "schema": {"type": "object", "properties": {"category": {"type": "string"}}, "required": ["category"]}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "expressions": {
+          "result": "\"You asked a question. We'll get back to you shortly.\""
+        }
+      }
+    },
+    {
+      "id": "handle-complaint",
+      "name": "Handle Complaint",
+      "type": "transform",
+      "input_ports": [
+        {"name": "value", "schema": {"type": "object", "properties": {"category": {"type": "string"}}, "required": ["category"]}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "expressions": {
+          "result": "\"We're sorry to hear about your issue. Escalating to support.\""
+        }
+      }
+    },
+    {
+      "id": "handle-praise",
+      "name": "Handle Praise",
+      "type": "transform",
+      "input_ports": [
+        {"name": "value", "schema": {"type": "object", "properties": {"category": {"type": "string"}}, "required": ["category"]}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "expressions": {
+          "result": "\"Thank you for the kind words!\""
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "message", "target_node_id": "classify", "target_port": "message"},
+    {"id": "e2", "source_node_id": "classify", "source_port": "response", "target_node_id": "router", "target_port": "value"},
+    {"id": "e3", "source_node_id": "router", "source_port": "question", "target_node_id": "handle-question", "target_port": "value"},
+    {"id": "e4", "source_node_id": "router", "source_port": "complaint", "target_node_id": "handle-complaint", "target_port": "value"},
+    {"id": "e5", "source_node_id": "router", "source_port": "praise", "target_node_id": "handle-praise", "target_port": "value"},
+    {"id": "e6", "source_node_id": "handle-question", "source_port": "result", "target_node_id": "output-1", "target_port": "result"},
+    {"id": "e7", "source_node_id": "handle-complaint", "source_port": "result", "target_node_id": "output-1", "target_port": "result"},
+    {"id": "e8", "source_node_id": "handle-praise", "source_port": "result", "target_node_id": "output-1", "target_port": "result"}
+  ]
+}

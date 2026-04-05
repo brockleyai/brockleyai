@@ -1,0 +1,12 @@
+{
+  "name": "superagent-tasks",
+  "graph": "superagent-tasks",
+  "requires_llm": true,
+  "requires_mcp": true,
+  "input": {"topic": "task test"},
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_contains", "field": "result", "substring": "hello from tasks"}
+  ],
+  "timeout_seconds": 90
+}

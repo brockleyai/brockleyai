@@ -1,0 +1,14 @@
+{
+  "name": "superagent-code-exec-llm",
+  "graph": "superagent-code-exec-llm",
+  "requires_llm": true,
+  "requires_mcp": true,
+  "input": {"numbers": "10,20,30,40"},
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "status_equals", "value": "completed"},
+    {"type": "output_contains", "field": "result", "substring": "100"},
+    {"type": "output_exists", "field": "result"}
+  ],
+  "timeout_seconds": 120
+}

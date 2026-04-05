@@ -1,0 +1,12 @@
+{
+  "name": "superagent-simple",
+  "graph": "superagent-simple",
+  "requires_llm": true,
+  "requires_mcp": true,
+  "input": {"topic": "quantum computing"},
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_contains", "field": "result", "substring": "hello from simple"}
+  ],
+  "timeout_seconds": 90
+}

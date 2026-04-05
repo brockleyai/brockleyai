@@ -1,0 +1,66 @@
+# Build output
+bin/
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+brockley-server
+brockley-worker
+brockley
+mock-llm
+mcp-test-server
+api-test-server
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Go workspace
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (web-ui)
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+
+# Docker
+.docker/
+
+# Secrets and certificates
+*.pem
+*.key
+credentials*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

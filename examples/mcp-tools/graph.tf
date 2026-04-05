@@ -1,0 +1,599 @@
+# E2E MCP Tools
+#
+# Terraform representation of the E2E MCP Tools test graph.
+# See graph.json for the equivalent JSON representation.
+
+variable "name" {
+  type    = string
+  default = "E2E MCP Tools"
+}
+
+resource "brockley_graph" "test" {
+  name        = var.name
+  namespace   = "e2e-tests"
+  description = "E2E test: tool nodes via MCP server, tool chaining, conditional routing on tool output, forEach with tool nodes, tool error handling."
+
+  nodes = <<-JSON
+  [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [
+        {
+          "name": "text",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "text",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "config": {},
+      "position": {
+        "x": 0,
+        "y": 150
+      }
+    },
+    {
+      "id": "echo-tool",
+      "name": "Echo Tool",
+      "type": "tool",
+      "input_ports": [
+        {
+          "name": "message",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "tool_name": "echo",
+        "mcp_url": "http://mcp-test-server:9090",
+        "headers": [
+          {
+            "name": "X-Test-Header",
+            "value": "e2e-marker"
+          }
+        ]
+      },
+      "position": {
+        "x": 200,
+        "y": 50
+      }
+    },
+    {
+      "id": "word-count-tool",
+      "name": "Word Count Tool",
+      "type": "tool",
+      "input_ports": [
+        {
+          "name": "text",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "tool_name": "word_count",
+        "mcp_url": "http://mcp-test-server:9090"
+      },
+      "position": {
+        "x": 400,
+        "y": 50
+      }
+    },
+    {
+      "id": "router",
+      "name": "Router",
+      "type": "conditional",
+      "input_ports": [
+        {
+          "name": "value",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "long",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "short",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "branches": [
+          {
+            "label": "long",
+            "condition": "(input.value | toInt) > 3"
+          }
+        ],
+        "default_label": "short"
+      },
+      "position": {
+        "x": 600,
+        "y": 50
+      }
+    },
+    {
+      "id": "handler-long",
+      "name": "Handler Long",
+      "type": "transform",
+      "input_ports": [
+        {
+          "name": "value",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "expressions": {
+          "result": "\"LONG: \" + input.value + \" words\""
+        }
+      },
+      "position": {
+        "x": 800,
+        "y": 0
+      }
+    },
+    {
+      "id": "handler-short",
+      "name": "Handler Short",
+      "type": "transform",
+      "input_ports": [
+        {
+          "name": "value",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "result",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "expressions": {
+          "result": "\"SHORT: \" + input.value + \" words\""
+        }
+      },
+      "position": {
+        "x": 800,
+        "y": 100
+      }
+    },
+    {
+      "id": "foreach-1",
+      "name": "ForEach Lookup",
+      "type": "foreach",
+      "input_ports": [
+        {
+          "name": "items",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "results",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "number"
+                },
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "config": {
+        "graph": {
+          "name": "ForEach Lookup Inner",
+          "namespace": "e2e-tests",
+          "version": 1,
+          "status": "active",
+          "nodes": [
+            {
+              "id": "inner-input",
+              "name": "Input",
+              "type": "input",
+              "input_ports": [],
+              "output_ports": [
+                {
+                  "name": "item",
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "index",
+                  "schema": {
+                    "type": "number"
+                  }
+                }
+              ],
+              "config": {},
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "inner-lookup",
+              "name": "Lookup Tool",
+              "type": "tool",
+              "input_ports": [
+                {
+                  "name": "key",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "output_ports": [
+                {
+                  "name": "result",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "config": {
+                "tool_name": "lookup",
+                "mcp_url": "http://mcp-test-server:9090"
+              },
+              "position": {
+                "x": 200,
+                "y": 0
+              }
+            },
+            {
+              "id": "inner-combine",
+              "name": "Combine",
+              "type": "transform",
+              "input_ports": [
+                {
+                  "name": "item",
+                  "schema": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "result",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "output_ports": [
+                {
+                  "name": "result",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "config": {
+                "expressions": {
+                  "result": "input.item + \"=\" + input.result"
+                }
+              },
+              "position": {
+                "x": 400,
+                "y": 0
+              }
+            },
+            {
+              "id": "inner-output",
+              "name": "Output",
+              "type": "output",
+              "input_ports": [
+                {
+                  "name": "result",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "output_ports": [
+                {
+                  "name": "result",
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "config": {},
+              "position": {
+                "x": 600,
+                "y": 0
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "ie1",
+              "source_node_id": "inner-input",
+              "source_port": "item",
+              "target_node_id": "inner-lookup",
+              "target_port": "key"
+            },
+            {
+              "id": "ie2",
+              "source_node_id": "inner-input",
+              "source_port": "item",
+              "target_node_id": "inner-combine",
+              "target_port": "item"
+            },
+            {
+              "id": "ie3",
+              "source_node_id": "inner-lookup",
+              "source_port": "result",
+              "target_node_id": "inner-combine",
+              "target_port": "result"
+            },
+            {
+              "id": "ie4",
+              "source_node_id": "inner-combine",
+              "source_port": "result",
+              "target_node_id": "inner-output",
+              "target_port": "result"
+            }
+          ]
+        },
+        "concurrency": 1,
+        "on_item_error": "continue"
+      },
+      "position": {
+        "x": 200,
+        "y": 250
+      }
+    },
+    {
+      "id": "format-lookups",
+      "name": "Format Lookups",
+      "type": "transform",
+      "input_ports": [
+        {
+          "name": "results",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "lookups",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "config": {
+        "expressions": {
+          "lookups": "input.results | filter(x => x != null) | map(\"result\")"
+        }
+      },
+      "position": {
+        "x": 400,
+        "y": 250
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {
+          "name": "classification",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "lookups",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "classification",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "lookups",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "config": {},
+      "position": {
+        "x": 1000,
+        "y": 150
+      }
+    }
+  ]
+  JSON
+
+  edges = <<-JSON
+  [
+    {
+      "id": "e1",
+      "source_node_id": "input-1",
+      "source_port": "text",
+      "target_node_id": "echo-tool",
+      "target_port": "message"
+    },
+    {
+      "id": "e2",
+      "source_node_id": "input-1",
+      "source_port": "items",
+      "target_node_id": "foreach-1",
+      "target_port": "items"
+    },
+    {
+      "id": "e3",
+      "source_node_id": "echo-tool",
+      "source_port": "result",
+      "target_node_id": "word-count-tool",
+      "target_port": "text"
+    },
+    {
+      "id": "e4",
+      "source_node_id": "word-count-tool",
+      "source_port": "result",
+      "target_node_id": "router",
+      "target_port": "value"
+    },
+    {
+      "id": "e5",
+      "source_node_id": "router",
+      "source_port": "long",
+      "target_node_id": "handler-long",
+      "target_port": "value"
+    },
+    {
+      "id": "e6",
+      "source_node_id": "router",
+      "source_port": "short",
+      "target_node_id": "handler-short",
+      "target_port": "value"
+    },
+    {
+      "id": "e7",
+      "source_node_id": "handler-long",
+      "source_port": "result",
+      "target_node_id": "output-1",
+      "target_port": "classification"
+    },
+    {
+      "id": "e8",
+      "source_node_id": "handler-short",
+      "source_port": "result",
+      "target_node_id": "output-1",
+      "target_port": "classification"
+    },
+    {
+      "id": "e9",
+      "source_node_id": "foreach-1",
+      "source_port": "results",
+      "target_node_id": "format-lookups",
+      "target_port": "results"
+    },
+    {
+      "id": "e10",
+      "source_node_id": "format-lookups",
+      "source_port": "lookups",
+      "target_node_id": "output-1",
+      "target_port": "lookups"
+    }
+  ]
+  JSON
+}

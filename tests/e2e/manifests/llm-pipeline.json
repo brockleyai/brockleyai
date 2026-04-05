@@ -1,0 +1,18 @@
+{
+  "name": "llm-pipeline",
+  "graph": "llm-pipeline",
+  "requires_llm": true,
+  "input": {
+    "ticket": {
+      "subject": "Cannot login",
+      "body": "Getting error 500 on login page",
+      "history": ["Tried resetting password", "Still not working"]
+    }
+  },
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_exists", "field": "reply"},
+    {"type": "output_type", "field": "reply", "json_type": "string"}
+  ],
+  "timeout_seconds": 120
+}

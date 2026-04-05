@@ -1,0 +1,259 @@
+{
+  "name": "support-pipeline",
+  "description": "Multi-step pipeline: classify a support ticket with an LLM, merge the classification with the original ticket, route by category to specialized LLM responders, and output the reply.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Ticket Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {
+          "name": "ticket",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "subject": {"type": "string"},
+              "body": {"type": "string"},
+              "history": {"type": "array", "items": {"type": "string"}}
+            },
+            "required": ["subject", "body"]
+          }
+        }
+      ],
+      "config": {},
+      "position": {"x": 0, "y": 150}
+    },
+    {
+      "id": "classify",
+      "name": "Classify Ticket",
+      "type": "llm",
+      "input_ports": [
+        {
+          "name": "ticket",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "subject": {"type": "string"},
+              "body": {"type": "string"},
+              "history": {"type": "array", "items": {"type": "string"}}
+            },
+            "required": ["subject", "body"]
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "category": {"type": "string"},
+              "urgency": {"type": "string"}
+            },
+            "required": ["category", "urgency"]
+          }
+        }
+      ],
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "api_key": "${OPENAI_API_KEY}",
+        "system_prompt": "You classify support tickets. Respond only with valid JSON.",
+        "user_prompt": "Classify this ticket:\nSubject: {{input.ticket.subject}}\nBody: {{input.ticket.body}}\n{{#if input.ticket.history | length > 0}}\nHistory:\n{{#each input.ticket.history}}\n- {{this}}\n{{/each}}\n{{/if}}\nReturn: {\"category\": \"billing\"|\"technical\"|\"general\", \"urgency\": \"high\"|\"medium\"|\"low\"}",
+        "variables": [
+          {
+            "name": "ticket",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "subject": {"type": "string"},
+                "body": {"type": "string"},
+                "history": {"type": "array", "items": {"type": "string"}}
+              },
+              "required": ["subject", "body"]
+            }
+          }
+        ],
+        "response_format": "json",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "category": {"type": "string", "enum": ["billing", "technical", "general"]},
+            "urgency": {"type": "string", "enum": ["high", "medium", "low"]}
+          },
+          "required": ["category", "urgency"]
+        },
+        "temperature": 0.0,
+        "max_tokens": 128
+      },
+      "position": {"x": 300, "y": 150}
+    },
+    {
+      "id": "merge",
+      "name": "Merge Ticket + Classification",
+      "type": "transform",
+      "input_ports": [
+        {
+          "name": "ticket",
+          "schema": {
+            "type": "object",
+            "properties": {"subject": {"type": "string"}, "body": {"type": "string"}},
+            "required": ["subject", "body"]
+          }
+        },
+        {
+          "name": "classification",
+          "schema": {
+            "type": "object",
+            "properties": {"category": {"type": "string"}, "urgency": {"type": "string"}},
+            "required": ["category", "urgency"]
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "enriched",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "subject": {"type": "string"},
+              "body": {"type": "string"},
+              "category": {"type": "string"},
+              "urgency": {"type": "string"}
+            },
+            "required": ["subject", "body", "category", "urgency"]
+          }
+        }
+      ],
+      "config": {
+        "expressions": {
+          "enriched": "{subject: input.ticket.subject, body: input.ticket.body, category: input.classification.category, urgency: input.classification.urgency}"
+        }
+      },
+      "position": {"x": 500, "y": 150}
+    },
+    {
+      "id": "route",
+      "name": "Route by Category",
+      "type": "conditional",
+      "input_ports": [
+        {
+          "name": "value",
+          "schema": {
+            "type": "object",
+            "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "category": {"type": "string"}, "urgency": {"type": "string"}},
+            "required": ["category"]
+          }
+        }
+      ],
+      "output_ports": [
+        {"name": "billing", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "category": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["category"]}},
+        {"name": "technical", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "category": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["category"]}},
+        {"name": "general", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "category": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["category"]}}
+      ],
+      "config": {
+        "branches": [
+          {"label": "billing", "condition": "input.value.category == \"billing\""},
+          {"label": "technical", "condition": "input.value.category == \"technical\""}
+        ],
+        "default_label": "general"
+      },
+      "position": {"x": 700, "y": 150}
+    },
+    {
+      "id": "billing-reply",
+      "name": "Billing Responder",
+      "type": "llm",
+      "input_ports": [
+        {"name": "data", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["subject", "body"]}}
+      ],
+      "output_ports": [
+        {"name": "response_text", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "api_key": "${OPENAI_API_KEY}",
+        "system_prompt": "You are a billing support specialist. Be empathetic and clear. Keep replies under 4 sentences.",
+        "user_prompt": "Customer ticket (urgency: {{input.data.urgency}}):\nSubject: {{input.data.subject}}\n{{input.data.body}}\n\nDraft a helpful reply:",
+        "variables": [{"name": "data", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["subject", "body"]}}],
+        "response_format": "text",
+        "max_tokens": 512
+      },
+      "position": {"x": 1000, "y": 0}
+    },
+    {
+      "id": "technical-reply",
+      "name": "Technical Responder",
+      "type": "llm",
+      "input_ports": [
+        {"name": "data", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["subject", "body"]}}
+      ],
+      "output_ports": [
+        {"name": "response_text", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "api_key": "${OPENAI_API_KEY}",
+        "system_prompt": "You are a technical support engineer. Provide clear troubleshooting steps.",
+        "user_prompt": "Customer ticket (urgency: {{input.data.urgency}}):\nSubject: {{input.data.subject}}\n{{input.data.body}}\n\nProvide troubleshooting steps:",
+        "variables": [{"name": "data", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["subject", "body"]}}],
+        "response_format": "text",
+        "max_tokens": 512
+      },
+      "position": {"x": 1000, "y": 150}
+    },
+    {
+      "id": "general-reply",
+      "name": "General Responder",
+      "type": "llm",
+      "input_ports": [
+        {"name": "data", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "urgency": {"type": "string"}}, "required": ["subject", "body"]}}
+      ],
+      "output_ports": [
+        {"name": "response_text", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "api_key": "${OPENAI_API_KEY}",
+        "system_prompt": "You are a friendly support agent.",
+        "user_prompt": "Customer ticket:\nSubject: {{input.data.subject}}\n{{input.data.body}}\n\nDraft a helpful reply:",
+        "variables": [{"name": "data", "schema": {"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}}, "required": ["subject", "body"]}}],
+        "response_format": "text",
+        "max_tokens": 512
+      },
+      "position": {"x": 1000, "y": 300}
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "reply", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "reply", "schema": {"type": "string"}}
+      ],
+      "config": {},
+      "position": {"x": 1300, "y": 150}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "ticket", "target_node_id": "classify", "target_port": "ticket"},
+    {"id": "e2", "source_node_id": "classify", "source_port": "response", "target_node_id": "merge", "target_port": "classification"},
+    {"id": "e3", "source_node_id": "input-1", "source_port": "ticket", "target_node_id": "merge", "target_port": "ticket"},
+    {"id": "e4", "source_node_id": "merge", "source_port": "enriched", "target_node_id": "route", "target_port": "value"},
+    {"id": "e5", "source_node_id": "route", "source_port": "billing", "target_node_id": "billing-reply", "target_port": "data"},
+    {"id": "e6", "source_node_id": "route", "source_port": "technical", "target_node_id": "technical-reply", "target_port": "data"},
+    {"id": "e7", "source_node_id": "route", "source_port": "general", "target_node_id": "general-reply", "target_port": "data"},
+    {"id": "e8", "source_node_id": "billing-reply", "source_port": "response_text", "target_node_id": "output-1", "target_port": "reply"},
+    {"id": "e9", "source_node_id": "technical-reply", "source_port": "response_text", "target_node_id": "output-1", "target_port": "reply"},
+    {"id": "e10", "source_node_id": "general-reply", "source_port": "response_text", "target_node_id": "output-1", "target_port": "reply"}
+  ]
+}

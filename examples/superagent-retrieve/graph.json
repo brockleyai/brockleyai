@@ -1,0 +1,140 @@
+{
+  "name": "E2E Superagent Retrieve",
+  "namespace": "e2e-tests",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "secret_key", "schema": {"type": "string"}},
+        {"name": "secret_value", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "seed-secret",
+      "name": "Seed Secret",
+      "type": "tool",
+      "input_ports": [
+        {"name": "key", "schema": {"type": "string"}},
+        {"name": "value", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "tool_name": "store_value",
+        "mcp_url": "http://mcp-test-server:9090"
+      }
+    },
+    {
+      "id": "agent-1",
+      "name": "Retrieve Agent",
+      "type": "superagent",
+      "input_ports": [
+        {"name": "secret_key", "schema": {"type": "string"}},
+        {"name": "seed_status", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}},
+        {"name": "_total_tool_calls", "schema": {"type": "integer"}},
+        {"name": "_finish_reason", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "prompt": "A secret has already been stored on the MCP server under key {{input.secret_key}}. The secret value is not present in the prompt or graph inputs. Use the retrieve_value tool with that exact key to obtain it, then reply with exactly the retrieved secret value and nothing else. Do not guess. The seed step status is: {{input.seed_status}}",
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-20b",
+        "api_key": "${OPENROUTER_API_KEY}",
+        "max_iterations": 3,
+        "max_total_tool_calls": 3,
+        "temperature": 0,
+        "max_tokens": 192,
+        "timeout_seconds": 60,
+        "system_preamble": "You are a precise agent. Use the required MCP tool immediately. Do not reveal chain-of-thought. Return only the final secret value.",
+        "skills": [
+          {
+            "name": "tools",
+            "description": "General tools",
+            "mcp_url": "http://mcp-test-server:9090",
+            "tools": ["retrieve_value"]
+          }
+        ],
+        "overrides": {
+          "evaluator": {"disabled": true}
+        }
+      }
+    },
+    {
+      "id": "seed-ready",
+      "name": "Seed Ready",
+      "type": "transform",
+      "input_ports": [
+        {"name": "seed_result", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "seed_status", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "expressions": {
+          "seed_status": "\"ready\""
+        }
+      }
+    },
+    {
+      "id": "tool-check",
+      "name": "Tool Check",
+      "type": "transform",
+      "input_ports": [
+        {"name": "total_tool_calls", "schema": {"type": "integer"}},
+        {"name": "finish_reason", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "used_tool", "schema": {"type": "boolean"}},
+        {"name": "finish_reason", "schema": {"type": "string"}},
+        {"name": "total_tool_calls", "schema": {"type": "integer"}}
+      ],
+      "config": {
+        "expressions": {
+          "used_tool": "input.total_tool_calls > 0",
+          "finish_reason": "input.finish_reason",
+          "total_tool_calls": "input.total_tool_calls"
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "result", "schema": {"type": "string"}},
+        {"name": "used_tool", "schema": {"type": "boolean"}},
+        {"name": "finish_reason", "schema": {"type": "string"}},
+        {"name": "total_tool_calls", "schema": {"type": "integer"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}},
+        {"name": "used_tool", "schema": {"type": "boolean"}},
+        {"name": "finish_reason", "schema": {"type": "string"}},
+        {"name": "total_tool_calls", "schema": {"type": "integer"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "secret_key", "target_node_id": "seed-secret", "target_port": "key"},
+    {"id": "e2", "source_node_id": "input-1", "source_port": "secret_value", "target_node_id": "seed-secret", "target_port": "value"},
+    {"id": "e3", "source_node_id": "input-1", "source_port": "secret_key", "target_node_id": "agent-1", "target_port": "secret_key"},
+    {"id": "e4", "source_node_id": "seed-secret", "source_port": "result", "target_node_id": "seed-ready", "target_port": "seed_result"},
+    {"id": "e5", "source_node_id": "seed-ready", "source_port": "seed_status", "target_node_id": "agent-1", "target_port": "seed_status"},
+    {"id": "e6", "source_node_id": "agent-1", "source_port": "result", "target_node_id": "output-1", "target_port": "result"},
+    {"id": "e7", "source_node_id": "agent-1", "source_port": "_total_tool_calls", "target_node_id": "tool-check", "target_port": "total_tool_calls"},
+    {"id": "e8", "source_node_id": "agent-1", "source_port": "_finish_reason", "target_node_id": "tool-check", "target_port": "finish_reason"},
+    {"id": "e9", "source_node_id": "tool-check", "source_port": "used_tool", "target_node_id": "output-1", "target_port": "used_tool"},
+    {"id": "e10", "source_node_id": "tool-check", "source_port": "finish_reason", "target_node_id": "output-1", "target_port": "finish_reason"},
+    {"id": "e11", "source_node_id": "tool-check", "source_port": "total_tool_calls", "target_node_id": "output-1", "target_port": "total_tool_calls"}
+  ]
+}

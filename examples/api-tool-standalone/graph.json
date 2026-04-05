@@ -1,0 +1,55 @@
+{
+  "name": "E2E API Tool Standalone",
+  "description": "E2E test: standalone api_tool node calling a REST endpoint via referenced API tool definition.",
+  "namespace": "e2e-tests",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [
+        {"name": "customer_id", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "customer_id", "schema": {"type": "string"}}
+      ],
+      "config": {},
+      "position": {"x": 0, "y": 100}
+    },
+    {
+      "id": "get-customer",
+      "name": "Get Customer",
+      "type": "api_tool",
+      "input_ports": [
+        {"name": "customer_id", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "object", "properties": {"id": {"type": "string"}, "email": {"type": "string"}, "name": {"type": "string"}}}}
+      ],
+      "config": {
+        "api_tool_id": "test-api",
+        "endpoint": "get_customer"
+      },
+      "position": {"x": 300, "y": 100}
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "result", "schema": {"type": "object", "properties": {"id": {"type": "string"}, "email": {"type": "string"}, "name": {"type": "string"}}}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "object", "properties": {"id": {"type": "string"}, "email": {"type": "string"}, "name": {"type": "string"}}}}
+      ],
+      "config": {},
+      "position": {"x": 600, "y": 100}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "customer_id", "target_node_id": "get-customer", "target_port": "customer_id"},
+    {"id": "e2", "source_node_id": "get-customer", "source_port": "result", "target_node_id": "output-1", "target_port": "result"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "superagent-code-exec",
+  "graph": "superagent-code-exec",
+  "requires_llm": false,
+  "requires_mcp": true,
+  "input": {"data": "test data"},
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "status_equals", "value": "completed"},
+    {"type": "output_exists", "field": "result"}
+  ],
+  "timeout_seconds": 60
+}

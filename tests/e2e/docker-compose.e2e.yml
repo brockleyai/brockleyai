@@ -1,0 +1,119 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: dev
+    ports:
+      - "18000:8000"
+    environment:
+      - DATABASE_URL=postgres://brockley:brockley@postgresql:5432/brockley_e2e?sslmode=disable
+      - REDIS_URL=redis://redis:6379/1
+      - BROCKLEY_ENV=development
+      - BROCKLEY_LOG_LEVEL=${BROCKLEY_LOG_LEVEL:-warn}
+      - BROCKLEY_LOG_FORMAT=text
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.worker
+      target: dev
+    environment:
+      - DATABASE_URL=postgres://brockley:brockley@postgresql:5432/brockley_e2e?sslmode=disable
+      - REDIS_URL=redis://redis:6379/1
+      - BROCKLEY_LOG_LEVEL=${BROCKLEY_LOG_LEVEL:-warn}
+      - BROCKLEY_LOG_FORMAT=text
+      - BROCKLEY_CONCURRENCY=5
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    depends_on:
+      server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mcp-test-server:
+        condition: service_healthy
+      mock-llm:
+        condition: service_healthy
+      api-test-server:
+        condition: service_healthy
+      coderunner:
+        condition: service_started
+
+  coderunner:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.coderunner
+      target: dev
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - BROCKLEY_LOG_LEVEL=${BROCKLEY_LOG_LEVEL:-warn}
+      - BROCKLEY_LOG_FORMAT=text
+      - BROCKLEY_CODERUNNER_CONCURRENCY=3
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  mcp-test-server:
+    build:
+      context: mcp-server
+      dockerfile: Dockerfile
+    environment:
+      - VERBOSE=${VERBOSE:-}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  mock-llm:
+    build:
+      context: mock-llm
+      dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9091/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  api-test-server:
+    build:
+      context: api-server
+      dockerfile: Dockerfile
+    environment:
+      - PORT=9092
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9092/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgresql:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: brockley
+      POSTGRES_PASSWORD: brockley
+      POSTGRES_DB: brockley_e2e
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brockley"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10

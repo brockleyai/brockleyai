@@ -1,0 +1,477 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brockley.ai/schemas/graph.json",
+  "title": "Brockley Graph",
+  "description": "A complete, self-contained Brockley agent workflow graph.",
+  "type": "object",
+  "required": ["name", "namespace", "version", "status", "nodes", "edges"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[a-zA-Z0-9_-][a-zA-Z0-9_ -]*$",
+      "description": "Human-readable name. Alphanumeric plus hyphens, underscores, and spaces."
+    },
+    "description": {
+      "type": "string",
+      "description": "Free-text description."
+    },
+    "namespace": {
+      "type": "string",
+      "default": "default",
+      "description": "Logical grouping."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing version number."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "archived"],
+      "description": "Graph lifecycle status."
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Node" },
+      "description": "Node definitions. Must include at least one input node."
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Edge" },
+      "description": "Edge definitions connecting node ports."
+    },
+    "state": {
+      "oneOf": [
+        { "$ref": "#/$defs/GraphState" },
+        { "type": "null" }
+      ],
+      "description": "Graph state definition with typed fields and reducers."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Arbitrary key-value metadata. Exempt from strong typing rules."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Node": {
+      "type": "object",
+      "required": ["id", "name", "type", "input_ports", "output_ports", "config"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the graph."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable label."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "input", "output", "llm", "tool", "api_tool",
+            "conditional", "transform", "foreach", "subgraph",
+            "human_in_the_loop", "superagent"
+          ],
+          "description": "Built-in node type."
+        },
+        "input_ports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Port" },
+          "description": "Typed input port definitions."
+        },
+        "output_ports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Port" },
+          "description": "Typed output port definitions."
+        },
+        "state_reads": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateBinding" },
+          "description": "Bind state fields to input ports."
+        },
+        "state_writes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateBinding" },
+          "description": "Push output port values into state fields."
+        },
+        "config": {
+          "type": "object",
+          "description": "Type-specific configuration. Use {} for input/output nodes."
+        },
+        "retry_policy": {
+          "$ref": "#/$defs/RetryPolicy"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum execution time for this node."
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arbitrary key-value metadata."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Port": {
+      "type": "object",
+      "required": ["name", "schema"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Port name, unique within a node's input (or output) ports."
+        },
+        "schema": {
+          "type": "object",
+          "description": "JSON Schema for the port's data type. Must be fully typed (no bare objects/arrays)."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Whether this port must be wired. Defaults to true for input ports."
+        },
+        "default": {
+          "description": "Default value if unwired. Must validate against the schema."
+        }
+      },
+      "additionalProperties": false
+    },
+    "StateBinding": {
+      "type": "object",
+      "required": ["state_field", "port"],
+      "properties": {
+        "state_field": {
+          "type": "string",
+          "description": "Name of the state field."
+        },
+        "port": {
+          "type": "string",
+          "description": "Port name (input for reads, output for writes)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Edge": {
+      "type": "object",
+      "required": ["id", "source_node_id", "source_port", "target_node_id", "target_port"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within the graph."
+        },
+        "source_node_id": {
+          "type": "string",
+          "description": "ID of the source node."
+        },
+        "source_port": {
+          "type": "string",
+          "description": "Output port name on the source node."
+        },
+        "target_node_id": {
+          "type": "string",
+          "description": "ID of the target node."
+        },
+        "target_port": {
+          "type": "string",
+          "description": "Input port name on the target node."
+        },
+        "back_edge": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, this edge creates a loop."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Boolean expression. Required if back_edge is true."
+        },
+        "max_iterations": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum loop iterations. Required if back_edge is true."
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": { "back_edge": { "const": true } }
+      },
+      "then": {
+        "required": ["id", "source_node_id", "source_port", "target_node_id", "target_port", "condition", "max_iterations"]
+      }
+    },
+    "GraphState": {
+      "type": "object",
+      "required": ["fields"],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StateField" },
+          "description": "Typed state field definitions."
+        }
+      },
+      "additionalProperties": false
+    },
+    "StateField": {
+      "type": "object",
+      "required": ["name", "schema", "reducer"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Field name. Referenced as state.<name> in expressions."
+        },
+        "schema": {
+          "type": "object",
+          "description": "JSON Schema for the field value. Must be fully typed."
+        },
+        "reducer": {
+          "type": "string",
+          "enum": ["replace", "append", "merge"],
+          "description": "How writes accumulate: replace (overwrite), append (add to array), merge (shallow merge object)."
+        },
+        "initial": {
+          "description": "Initial value. Must validate against schema. Defaults to type zero value."
+        }
+      },
+      "additionalProperties": false
+    },
+    "RetryPolicy": {
+      "type": "object",
+      "properties": {
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Maximum retry attempts."
+        },
+        "backoff_strategy": {
+          "type": "string",
+          "enum": ["fixed", "exponential"],
+          "default": "exponential",
+          "description": "Backoff strategy."
+        },
+        "initial_delay_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Delay before first retry."
+        },
+        "max_delay_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "default": 60.0,
+          "description": "Maximum delay between retries."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Position": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "HeaderConfig": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Header name."
+        },
+        "value": {
+          "type": "string",
+          "description": "Static header value."
+        },
+        "from_input": {
+          "type": "string",
+          "description": "Dynamic: input port name."
+        },
+        "secret_ref": {
+          "type": "string",
+          "description": "Secret store reference."
+        }
+      },
+      "additionalProperties": false
+    },
+    "LLMToolDefinition": {
+      "type": "object",
+      "required": ["name", "description", "parameters"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Tool name."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the tool does (shown to LLM)."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "JSON Schema for tool input parameters."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ToolRoute": {
+      "type": "object",
+      "properties": {
+        "mcp_url": {
+          "type": "string",
+          "description": "MCP server URL."
+        },
+        "mcp_transport": {
+          "type": "string",
+          "enum": ["sse", "stdio", "http"],
+          "default": "http",
+          "description": "MCP transport protocol."
+        },
+        "api_tool_id": {
+          "type": "string",
+          "description": "API tool definition library resource ID."
+        },
+        "api_endpoint": {
+          "type": "string",
+          "description": "Endpoint name within the API tool definition."
+        },
+        "headers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/HeaderConfig" }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Per-call timeout (default 30)."
+        },
+        "compacted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use compacted tool discovery mode."
+        }
+      },
+      "additionalProperties": false
+    },
+    "APIToolRef": {
+      "type": "object",
+      "required": ["api_tool_id", "endpoint"],
+      "properties": {
+        "api_tool_id": {
+          "type": "string",
+          "description": "Library resource ID."
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Endpoint name within the definition."
+        },
+        "tool_name": {
+          "type": "string",
+          "description": "Override tool name (default: endpoint name)."
+        },
+        "headers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/HeaderConfig" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Branch": {
+      "type": "object",
+      "required": ["label", "condition"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Must match an output port name."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Expression that evaluates to boolean."
+        }
+      },
+      "additionalProperties": false
+    },
+    "SuperagentSkill": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Skill name."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this skill provides."
+        },
+        "mcp_url": {
+          "type": "string",
+          "description": "MCP server URL."
+        },
+        "mcp_transport": {
+          "type": "string",
+          "default": "http"
+        },
+        "api_tool_id": {
+          "type": "string",
+          "description": "API tool definition library resource ID."
+        },
+        "endpoints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Which API endpoints to expose as tools."
+        },
+        "headers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/HeaderConfig" }
+        },
+        "prompt_fragment": {
+          "type": "string",
+          "description": "Extra context for system prompt."
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowlist of tool names (empty = all)."
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "compacted": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "PortMapping": {
+      "type": "object",
+      "required": ["inputs", "outputs"],
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Outer input port name -> inner 'node_id.port_name'."
+        },
+        "outputs": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Inner 'node_id.port_name' -> outer output port name."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

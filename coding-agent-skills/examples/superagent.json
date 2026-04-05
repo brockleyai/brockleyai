@@ -1,0 +1,84 @@
+{
+  "name": "superagent-researcher",
+  "description": "Autonomous research agent using the superagent node. Takes a topic, uses MCP-based search and reader tools, and produces a report.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "topic", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "agent",
+      "name": "Research Agent",
+      "type": "superagent",
+      "input_ports": [
+        {"name": "topic", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "report", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "prompt": "Research the topic '{{input.topic}}' thoroughly. Find at least 3 sources, synthesize the information, and write a comprehensive report with citations.",
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "api_key": "${ANTHROPIC_API_KEY}",
+        "system_preamble": "You are an expert researcher. Be thorough and cite your sources.",
+        "max_iterations": 15,
+        "max_total_tool_calls": 40,
+        "timeout_seconds": 300,
+        "temperature": 0.3,
+        "skills": [
+          {
+            "name": "search",
+            "description": "Web search engine for finding information on any topic",
+            "mcp_url": "http://search-server:9090"
+          },
+          {
+            "name": "reader",
+            "description": "Read and extract content from web pages",
+            "mcp_url": "http://reader-server:9090",
+            "tools": ["read_page", "extract_text"],
+            "timeout_seconds": 15
+          }
+        ],
+        "overrides": {
+          "evaluator": {"disabled": true},
+          "context_compaction": {
+            "enabled": true,
+            "context_window_limit": 100000,
+            "compaction_threshold": 0.75,
+            "preserve_recent_messages": 5
+          },
+          "task_tracking": {
+            "enabled": true,
+            "reminder_frequency": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "report", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "report", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "topic", "target_node_id": "agent", "target_port": "topic"},
+    {"id": "e2", "source_node_id": "agent", "source_port": "report", "target_node_id": "output-1", "target_port": "report"}
+  ]
+}

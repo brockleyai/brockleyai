@@ -1,0 +1,112 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - DATABASE_URL=postgres://brockley:brockley@postgresql:5432/brockley?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - BROCKLEY_ENV=development
+      - BROCKLEY_LOG_LEVEL=debug
+      - BROCKLEY_LOG_FORMAT=text
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.worker
+      target: dev
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - DATABASE_URL=postgres://brockley:brockley@postgresql:5432/brockley?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - BROCKLEY_LOG_LEVEL=debug
+      - BROCKLEY_LOG_FORMAT=text
+      - BROCKLEY_CONCURRENCY=5
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  coderunner:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.coderunner
+      target: dev
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - BROCKLEY_LOG_LEVEL=debug
+      - BROCKLEY_LOG_FORMAT=text
+      - BROCKLEY_CODERUNNER_CONCURRENCY=3
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  web-ui:
+    build:
+      context: ../../web-ui
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "3000:3000"
+    environment:
+      - BROCKLEY_API_URL=http://localhost:8000
+
+  seed:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      target: dev
+    env_file:
+      - path: ../../.env
+        required: false
+    command: ["sh", "-c", "sleep 5 && for f in /app/examples/*/graph.json; do envsubst < $$f | curl -s -X POST http://server:8000/api/v1/graphs -H 'Content-Type: application/json' -d @-; done && echo 'Seed data loaded'"]
+    depends_on:
+      server:
+        condition: service_started
+    restart: "no"
+
+  postgresql:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=brockley
+      - POSTGRES_PASSWORD=brockley
+      - POSTGRES_DB=brockley
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brockley"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg-data:

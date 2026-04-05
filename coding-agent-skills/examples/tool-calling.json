@@ -1,0 +1,76 @@
+{
+  "name": "tool-calling",
+  "description": "LLM node with tool_loop enabled. The LLM can call web_search and calculator tools via MCP servers, iterating until it has a complete answer.",
+  "namespace": "default",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "question", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "agent",
+      "name": "Tool-Using Agent",
+      "type": "llm",
+      "input_ports": [
+        {"name": "question", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "response_text", "schema": {"type": "string"}},
+        {"name": "finish_reason", "schema": {"type": "string"}},
+        {"name": "total_tool_calls", "schema": {"type": "integer"}},
+        {"name": "iterations", "schema": {"type": "integer"}}
+      ],
+      "config": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "api_key": "${ANTHROPIC_API_KEY}",
+        "system_prompt": "You are a helpful research assistant with access to web search and a calculator. Use tools to find accurate information before answering.",
+        "user_prompt": "{{input.question}}",
+        "variables": [
+          {"name": "question", "schema": {"type": "string"}}
+        ],
+        "response_format": "text",
+        "tool_loop": true,
+        "max_tool_calls": 15,
+        "max_loop_iterations": 5,
+        "tool_routing": {
+          "web_search": {
+            "mcp_url": "http://search-mcp-server:9090",
+            "timeout_seconds": 15
+          },
+          "calculator": {
+            "mcp_url": "http://calc-mcp-server:9090",
+            "timeout_seconds": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "answer", "schema": {"type": "string"}},
+        {"name": "tool_calls_used", "schema": {"type": "integer"}}
+      ],
+      "output_ports": [
+        {"name": "answer", "schema": {"type": "string"}},
+        {"name": "tool_calls_used", "schema": {"type": "integer"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "question", "target_node_id": "agent", "target_port": "question"},
+    {"id": "e2", "source_node_id": "agent", "source_port": "response_text", "target_node_id": "output-1", "target_port": "answer"},
+    {"id": "e3", "source_node_id": "agent", "source_port": "total_tool_calls", "target_node_id": "output-1", "target_port": "tool_calls_used"}
+  ]
+}

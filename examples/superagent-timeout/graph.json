@@ -1,0 +1,60 @@
+{
+  "name": "E2E Superagent Timeout",
+  "namespace": "e2e-tests",
+  "version": 1,
+  "status": "active",
+  "nodes": [
+    {
+      "id": "input-1",
+      "name": "Input",
+      "type": "input",
+      "input_ports": [],
+      "output_ports": [
+        {"name": "topic", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    },
+    {
+      "id": "agent-1",
+      "name": "Timeout Agent",
+      "type": "superagent",
+      "input_ports": [
+        {"name": "topic", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {
+        "prompt": "Reply with exactly: timeout safe",
+        "provider": "openrouter",
+        "model": "openai/gpt-oss-20b",
+        "api_key": "${OPENROUTER_API_KEY}",
+        "timeout_seconds": 30,
+        "max_iterations": 3,
+        "max_total_tool_calls": 5,
+        "temperature": 0,
+        "max_tokens": 128,
+        "skills": [{"name": "tools", "description": "General tools", "mcp_url": "http://mcp-test-server:9090"}],
+        "overrides": {
+          "evaluator": {"disabled": true}
+        }
+      }
+    },
+    {
+      "id": "output-1",
+      "name": "Output",
+      "type": "output",
+      "input_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "output_ports": [
+        {"name": "result", "schema": {"type": "string"}}
+      ],
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"id": "e1", "source_node_id": "input-1", "source_port": "topic", "target_node_id": "agent-1", "target_port": "topic"},
+    {"id": "e2", "source_node_id": "agent-1", "source_port": "result", "target_node_id": "output-1", "target_port": "result"}
+  ]
+}

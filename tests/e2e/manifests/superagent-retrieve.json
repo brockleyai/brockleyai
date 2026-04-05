@@ -1,0 +1,17 @@
+{
+  "name": "superagent-retrieve",
+  "graph": "superagent-retrieve",
+  "requires_llm": true,
+  "requires_mcp": true,
+  "input": {
+    "secret_key": "vault-key-7xq9",
+    "secret_value": "amber-hedgehog-29"
+  },
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_contains", "field": "result", "substring": "amber-hedgehog-29"},
+    {"type": "output_equals", "field": "used_tool", "value": "true"},
+    {"type": "output_equals", "field": "finish_reason", "value": "done"}
+  ],
+  "timeout_seconds": 120
+}

@@ -1,0 +1,20 @@
+{
+  "name": "comprehensive-standard",
+  "graph": "comprehensive",
+  "requires_llm": false,
+  "input": {
+    "data": {
+      "text": " Hello World ",
+      "number": 7,
+      "tier": "standard",
+      "priority": "high",
+      "items": ["a", "b", "skip", "a"],
+      "tags": {"color": "red", "size": "lg"}
+    }
+  },
+  "expected_status": "completed",
+  "assertions": [
+    {"type": "output_equals", "field": "result", "value": "standard: Hello World"}
+  ],
+  "timeout_seconds": 30
+}
